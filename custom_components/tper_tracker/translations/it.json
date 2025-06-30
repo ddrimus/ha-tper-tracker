@@ -1,0 +1,119 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Impostazione TPER Tracker",
+        "description": "Cerca la fermata del bus per nome, indirizzo o numero di fermata.",
+        "data": {
+          "stop_query": "Cerca fermata"
+        }
+      },
+      "select_stop": {
+        "title": "Seleziona Fermata",
+        "description": "Scegli la tua fermata tra i risultati:",
+        "data": {
+          "stop_id": "Fermata del bus"
+        }
+      },
+      "select_lines": {
+        "title": "Seleziona Linee",
+        "description": "Scegli le linee bus da monitorare:",
+        "data": {
+          "line_ids": "Linee del bus"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connessione fallita. Controlla la connessione e riprova.",
+      "no_stops_found": "Nessuna fermata trovata. Prova con parole chiave diverse.",
+      "no_lines_found": "Nessuna linea disponibile per questa fermata.",
+      "unknown": "Qualcosa è andato storto. Riprova.",
+      "invalid_query": "Ricerca non valida. Inserisci un nome fermata o numero valido.",
+      "invalid_stop_id": "Selezione fermata non valida. Seleziona una fermata valida.",
+      "invalid_line_selection": "Selezione linee non valida. Seleziona almeno una linea valida (max 20)."
+    },
+    "abort": {
+      "already_configured": "Questa fermata è già configurata. Usa configura per modificare le linee."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Modifica Linee",
+        "description": "Seleziona le linee del bus da monitorare:",
+        "data": {
+          "line_ids": "Linee del bus"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connessione fallita. Controlla la connessione e riprova.",
+      "invalid_line_selection": "Selezione linee non valida. Seleziona almeno una linea valida (max 20)."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bus_line": {
+        "name": "Linea {line_name}",
+        "state": {
+          "not_available": "Dati non disponibili",
+          "no_more_buses": "Servizio terminato",
+          "system_error": "Errore di sistema",
+          "api_error": "Errore di connessione"
+        },
+        "state_attributes": {
+          "last_update": {
+            "name": "Ultimo aggiornamento"
+          },
+          "line": {
+            "name": "Linea"
+          },
+          "next_bus_1_time": {
+            "name": "Bus 1 - Orario di arrivo"
+          },
+          "next_bus_1_satellite": {
+            "name": "Bus 1 - Tracciamento GPS"
+          },
+          "next_bus_1_accessible": {
+            "name": "Bus 1 - Accessibile"
+          },
+          "next_bus_2_time": {
+            "name": "Bus 2 - Orario di arrivo"
+          },
+          "next_bus_2_satellite": {
+            "name": "Bus 2 - Tracciamento GPS"
+          },
+          "next_bus_2_accessible": {
+            "name": "Bus 2 - Accessibile"
+          },
+          "next_bus_3_time": {
+            "name": "Bus 3 - Orario di arrivo"
+          },
+          "next_bus_3_satellite": {
+            "name": "Bus 3 - Tracciamento GPS"
+          },
+          "next_bus_3_accessible": {
+            "name": "Bus 3 - Accessibile"
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "api_error": {
+      "message": "Errore API TPER: {error}"
+    },
+    "no_results": {
+      "message": "Nessun risultato trovato"
+    },
+    "real_time_not_available": {
+      "message": "Dati in tempo reale non disponibili per la linea {line_id}"
+    },
+    "no_more_buses": {
+      "message": "Non ci sono più autobus programmati per la linea {line_id} oggi"
+    },
+    "system_error": {
+      "message": "Errore di sistema TPER per la linea {line_id}"
+    }
+  }
+}

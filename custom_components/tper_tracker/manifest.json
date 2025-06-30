@@ -1,0 +1,12 @@
+{
+  "domain": "tper_tracker",
+  "name": "TPER Tracker",
+  "codeowners": ["@ddrimus"],
+  "config_flow": true,
+  "documentation": "https://github.com/ddrimus/ha-tper-tracker",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/ddrimus/ha-tper-tracker/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

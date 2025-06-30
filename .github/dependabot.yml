@@ -1,0 +1,21 @@
+version: 2
+updates:
+
+# Monitor GitHub Actions for security and version updates
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+
+  groups:
+    # Group regular version updates together
+    updates:
+      applies-to: version-updates
+      patterns:
+      - "*"
+
+    # Group security updates separately for priority handling
+    security-updates:
+      applies-to: security-updates
+      patterns:
+      - "*"

@@ -1,0 +1,21 @@
+name: Hassfest Validation
+
+on:
+  pull_request:
+  push:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  hassfest-validation:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Download current repository code
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+
+      # Execute Hassfest validation
+      - name: Run Hassfest validation
+        uses: home-assistant/actions/hassfest@master

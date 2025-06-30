@@ -1,0 +1,119 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "TPER Tracker Setup",
+        "description": "Search for your bus stop by name, address, or stop number.",
+        "data": {
+          "stop_query": "Search stop"
+        }
+      },
+      "select_stop": {
+        "title": "Select Stop",
+        "description": "Choose your bus stop from the results:",
+        "data": {
+          "stop_id": "Bus stop"
+        }
+      },
+      "select_lines": {
+        "title": "Select Lines",
+        "description": "Choose which bus lines to monitor:",
+        "data": {
+          "line_ids": "Bus lines"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connection failed. Check internet and retry.",
+      "no_stops_found": "No stops found. Try different keywords.",
+      "no_lines_found": "No lines available at this stop.",
+      "unknown": "Something went wrong. Please retry.",
+      "invalid_query": "Invalid search query. Please enter a valid stop name or number.",
+      "invalid_stop_id": "Invalid stop selection. Please select a valid stop.",
+      "invalid_line_selection": "Invalid line selection. Please select at least one valid line (max 20)."
+    },
+    "abort": {
+      "already_configured": "This stop is already configured. Use configure to modify lines."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edit Lines",
+        "description": "Select which bus lines to monitor:",
+        "data": {
+          "line_ids": "Bus lines"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connection failed. Check internet and retry.",
+      "invalid_line_selection": "Invalid line selection. Please select at least one valid line (max 20)."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bus_line": {
+        "name": "Line {line_name}",
+        "state": {
+          "not_available": "Data unavailable",
+          "no_more_buses": "Service ended",
+          "system_error": "System error",
+          "api_error": "Connection error"
+        },
+        "state_attributes": {
+          "last_update": {
+            "name": "Last updated"
+          },
+          "line": {
+            "name": "Line"
+          },
+          "next_bus_1_time": {
+            "name": "Bus 1 - Arrival time"
+          },
+          "next_bus_1_satellite": {
+            "name": "Bus 1 - GPS tracking"
+          },
+          "next_bus_1_accessible": {
+            "name": "Bus 1 - Accessible"
+          },
+          "next_bus_2_time": {
+            "name": "Bus 2 - Arrival time"
+          },
+          "next_bus_2_satellite": {
+            "name": "Bus 2 - GPS tracking"
+          },
+          "next_bus_2_accessible": {
+            "name": "Bus 2 - Accessible"
+          },
+          "next_bus_3_time": {
+            "name": "Bus 3 - Arrival time"
+          },
+          "next_bus_3_satellite": {
+            "name": "Bus 3 - GPS tracking"
+          },
+          "next_bus_3_accessible": {
+            "name": "Bus 3 - Accessible"
+          }
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "api_error": {
+      "message": "TPER API error: {error}"
+    },
+    "no_results": {
+      "message": "No results found"
+    },
+    "real_time_not_available": {
+      "message": "Real-time data not available for line {line_id}"
+    },
+    "no_more_buses": {
+      "message": "No more buses scheduled for line {line_id} today"
+    },
+    "system_error": {
+      "message": "TPER system error for line {line_id}"
+    }
+  }
+}
