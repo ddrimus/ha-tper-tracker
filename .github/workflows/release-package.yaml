@@ -41,8 +41,10 @@ jobs:
 
       # Create integration package
       - name: Create package
-        run: zip -r tper_tracker.zip custom_components/tper_tracker/
-
+        run: |
+          cd custom_components/tper_tracker
+          zip -r ../../tper_tracker.zip .
+          
       # Upload package to release
       - name: Upload release
         uses: softprops/action-gh-release@v2
