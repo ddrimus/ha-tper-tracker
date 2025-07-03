@@ -19,10 +19,7 @@ Un'integrazione per Home Assistant per monitorare gli arrivi degli autobus in te
 ### HACS (Consigliato)
 
 1. Apri HACS nella tua istanza di Home Assistant.
-2. Clicca il menu a tre punti e seleziona "Archivi digitali personalizzati".
-3. Aggiungi `https://github.com/ddrimus/ha-tper-tracker` come URL del repository e scegli come tipo "Integrazione".
-5. Clicca "Aggiungi" per salvare il repository.
-6. Cerca "TPER Tracker" e installalo.
+2. Cerca "TPER Tracker" e installalo.
 7. Riavvia Home Assistant.
 
 ### Installazione Manuale

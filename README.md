@@ -19,11 +19,8 @@ A Home Assistant integration to track real-time bus arrivals from [TPER](https:/
 ### HACS (Recommended)
 
 1. Open HACS in your Home Assistant instance.
-2. Click the three dots menu and select "Custom repositories".
-3. Add `https://github.com/ddrimus/ha-tper-tracker` as repository URL and choose as type "Integration".
-5. Click "Add" to save the repository.
-6. Search for "TPER Tracker" and install it.
-7. Restart Home Assistant.
+2. Search for "TPER Tracker" and install it.
+3. Restart Home Assistant.
 
 ### Manual Installation
 
