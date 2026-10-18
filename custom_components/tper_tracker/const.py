@@ -1,23 +1,39 @@
 # Integration domain identifier
 DOMAIN = "tper_tracker"
 
-# TPER API base URL and endpoint URLs
-BASE_API_URL = "https://webus.bo.it/app"
-STOP_SEARCH_URL = f"{BASE_API_URL}/getSelect.php"
-STOP_LINES_URL = f"{BASE_API_URL}/getLinee.php"
-REAL_TIME_URL = f"{BASE_API_URL}/getRealTime.php"
+# TPER Hello Bus real-time endpoint (one stop and one line per request)
+HELLOBUS_URL = "https://hellobuswsweb.tper.it/web-services/hellobus.asmx/QueryHellobus"
+
+# TPER open-data portal and the stop/line dataset used for search and line lists
+OPEN_DATA_URL = "https://solweb.tper.it/web/tools/open-data"
+STOPS_DATASET = "lineefermate"
+
+# Identifies this integration to TPER
+USER_AGENT = "ha-tper-tracker (+https://github.com/ddrimus/ha-tper-tracker)"
+
+# Timezone of the times reported by TPER
+TPER_TIME_ZONE = "Europe/Rome"
 
 # Configuration entry keys
 CONF_STOP_ID = "stop_id"
 CONF_STOP_NAME = "stop_name"
-CONF_LINE_IDS = "line_ids"
-CONF_LINE_NAMES = "line_names"
+CONF_LINES = "lines"
 
-# API and update timing configuration
+# API and update timing configuration (seconds)
 API_TIMEOUT = 10
+DATASET_TIMEOUT = 60
 UPDATE_INTERVAL = 60
 
-# Rate limiting and concurrency settings
-DEFAULT_RATE_LIMIT_CALLS_PER_SECOND = 2.0
-DEFAULT_MAX_CONCURRENT_REQUESTS = 2
-MINIMUM_UPDATE_INTERVAL = 30
+# Polling interval when no bus is due and recheck interval for lines not served
+IDLE_UPDATE_INTERVAL = 300
+NOT_SERVED_RECHECK = 3600
+
+# Rate limit protection, as TPER locks an IP after about 190 requests in a few minutes
+REQUEST_SPACING = 2.0
+LOCK_BACKOFF = 600
+
+# How long the downloaded stop directory is trusted before checking for a newer version
+STOPS_MAX_AGE = 7 * 24 * 3600
+
+# Maximum number of lines that can be tracked per stop
+MAX_LINES = 20
