@@ -1,0 +1,59 @@
+name: "Python: Test Suite"
+# Run on every PR and on main, plus manual dispatch
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# No default permissions, each job sets its own
+permissions: {}
+
+# Cancel a superseded run on the same ref
+concurrency:
+  group: python-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Lint with Ruff & Run Tests with Pytest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      # Shallow, credential-less checkout; nothing here needs git history or push access
+      - name: Checkout repository source code (read-only)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Same Python version as the Home Assistant release the tests run against
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      # Home Assistant test harness and ruff, pinned in requirements.txt
+      - name: Install test dependencies
+        run: |
+          set -euo pipefail
+          pip install -r requirements.txt
+
+      # Same rules as pyproject.toml, so a local ruff run gives the same result
+      - name: Lint with ruff
+        run: |
+          set -euo pipefail
+          ruff check custom_components tests
+
+      # Includes the lifecycle test that runs every component together
+      - name: Run tests with coverage
+        run: |
+          set -euo pipefail
+          pytest --cov=custom_components/tper_tracker --cov-report=term-missing

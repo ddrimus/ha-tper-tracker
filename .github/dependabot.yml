@@ -1,21 +1,28 @@
+# Weekly updates, one grouped PR per ecosystem, commits prefixed chore(deps) so release notes file them under Other changes
 version: 2
 updates:
+  # Actions are pinned by SHA, the version comment next to each pin is updated with it
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
-# Monitor GitHub Actions for security and version updates
-- package-ecosystem: "github-actions"
-  directory: "/"
-  schedule:
-    interval: "weekly"
-
-  groups:
-    # Group regular version updates together
-    updates:
-      applies-to: version-updates
-      patterns:
-      - "*"
-
-    # Group security updates separately for priority handling
-    security-updates:
-      applies-to: security-updates
-      patterns:
-      - "*"
+  # Test dependencies pinned in requirements.txt
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      python-dependencies:
+        patterns:
+          - "*"

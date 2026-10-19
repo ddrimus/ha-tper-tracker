@@ -1,0 +1,93 @@
+name: "Release: Package & Publish"
+# Run on version tags, the zip is what HACS installs
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+# No default permissions, each job sets its own
+permissions: {}
+
+# Never cancel a release that has started
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify Release Version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # Shallow, credential-less checkout; nothing here needs git history or push access
+      - name: Checkout repository source code (read-only)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Release tag has to match the version in manifest.json
+      - name: Verify release tag matches manifest.json version
+        run: |
+          set -euo pipefail
+          manifest_version="$(python3 -c 'import json; print(json.load(open("custom_components/tper_tracker/manifest.json"))["version"])')"
+          if [ "${GITHUB_REF_NAME#v}" != "$manifest_version" ]; then
+            echo "tag $GITHUB_REF_NAME does not match manifest.json version $manifest_version" >&2
+            exit 1
+          fi
+
+  release:
+    name: Create GitHub Release
+    needs:
+      - verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      # Full history and tags, the release notes need every commit since the previous tag
+      - name: Checkout repository source code (read-only)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Checkout turns an annotated tag into a lightweight one, fetch it again to keep its message
+      - name: Fetch annotated release tag
+        run: |
+          set -euo pipefail
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
+      # Notes from .github/cliff.toml for the tag being built
+      - name: Generate release notes with git-cliff
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUTPUT: release-notes.md
+        with:
+          config: .github/cliff.toml
+          args: --current --strip all
+
+      # Integration folder only, named as hacs.json expects
+      - name: Package integration for HACS
+        run: |
+          set -euo pipefail
+          cd custom_components/tper_tracker
+          zip -r "$GITHUB_WORKSPACE/tper_tracker.zip" . -x "__pycache__/*"
+
+      # Tags with a suffix like v2.1.0-rc.1 become pre-releases
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          flags=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && flags+=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" tper_tracker.zip \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            "${flags[@]}"

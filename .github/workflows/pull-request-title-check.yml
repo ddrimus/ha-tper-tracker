@@ -1,0 +1,39 @@
+name: "Pull Request: Title Check"
+# Run when a PR is opened, renamed or updated; pull_request_target so PRs from forks get a token too, no code is checked out
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+# No default permissions, each job sets its own
+permissions: {}
+
+# Cancel a superseded check on the same PR
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  title:
+    name: Validate Semantic Pull Request Title
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    steps:
+      # Squash merges use the PR title as the commit title, and the release notes group commits by its type
+      - name: Check title follows conventional commits
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            chore
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The description "{subject}" in "{title}" has to start with a lowercase letter, for example "fix: keep fast polling for late buses"

@@ -1,0 +1,59 @@
+name: "Home Assistant: Validation"
+# Run on every PR and on main, daily since both validators change without code changes here, plus manual dispatch
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+# No default permissions, each job sets its own
+permissions: {}
+
+# Cancel a superseded run on the same ref
+concurrency:
+  group: ha-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  hassfest:
+    name: Validate Integration with Hassfest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # Shallow, credential-less checkout; nothing here needs git history or push access
+      - name: Checkout repository source code (read-only)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Same checks Home Assistant runs on core integrations: manifest, translations, config flow
+      - name: Run hassfest
+        uses: home-assistant/actions/hassfest@cd6f3635a740c84d8a14f6121a90068b8ece6bf6 # master
+
+  hacs:
+    name: Validate Repository with HACS
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      # Shallow, credential-less checkout; nothing here needs git history or push access
+      - name: Checkout repository source code (read-only)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Checks hacs.json, the repository information and the release layout HACS installs from
+      - name: Run HACS validation
+        uses: hacs/action@1ebf01c408f29afcb6406bd431bc98fd8cbb15aa # main
+        with:
+          category: integration

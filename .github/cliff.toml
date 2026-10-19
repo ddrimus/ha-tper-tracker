@@ -1,0 +1,48 @@
+# git-cliff config for the GitHub release notes, commits grouped by conventional commit type
+
+# Used for the changelog link
+[remote.github]
+owner = "ddrimus"
+repo = "ha-tper-tracker"
+
+[changelog]
+# The <!-- n --> prefixes only fix the section order, striptags hides them; Hidden holds merge commits
+# Each line is the commit title without its feat:/fix: prefix, the full list of commits is behind the changelog link
+body = """
+{% set repo_url = "https://github.com/" ~ remote.github.owner ~ "/" ~ remote.github.repo -%}
+# TPER Tracker {{ version }}
+
+Home Assistant integration for real-time TPER bus arrivals in Bologna.
+{% for group, commits in commits | group_by(attribute="group") %}
+{%- if group != "<!-- 9 -->Hidden" %}
+## {{ group | striptags | trim }}
+
+{% for commit in commits -%}
+- {{ commit.message | split(pat="\n") | first | trim | replace_regex(from="^[a-zA-Z]+(\\([^)]*\\))?!?:\\s*", to="") | upper_first }}
+{% endfor -%}
+{% endif -%}
+{% endfor %}
+## Installation
+
+Update from HACS, or download `tper_tracker.zip` below and extract it into `custom_components/tper_tracker`.
+
+**Full changelog:** {% if previous.version %}{{ repo_url }}/compare/{{ previous.version }}...{{ version }}{% else %}{{ repo_url }}/commits/{{ version }}{% endif %}
+"""
+
+# Plain regex matching instead of the conventional parser, which drops commits it can't parse
+[git]
+conventional_commits = false
+filter_unconventional = false
+tag_pattern = "^v[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+# Squash merges end the title with " (#12)", dropped so every line reads the same
+commit_preprocessors = [
+  { pattern = '\s*\(#[0-9]+\)$', replace = "" },
+]
+# First match wins, anything that isn't feat or fix goes under other changes
+# Merges are hidden instead of skipped, a skipped commit takes its tag with it
+commit_parsers = [
+  { message = "^Merge ", group = "<!-- 9 -->Hidden" },
+  { message = "(?i)^feat", group = "<!-- 1 -->Highlights" },
+  { message = "(?i)^fix", group = "<!-- 2 -->Fixes" },
+  { message = ".*", group = "<!-- 3 -->Other changes" },
+]
