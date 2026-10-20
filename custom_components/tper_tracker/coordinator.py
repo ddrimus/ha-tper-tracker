@@ -29,6 +29,7 @@ from .const import (
     TPER_TIME_ZONE,
     UPDATE_INTERVAL,
 )
+from .issues import ISSUE_LINES_NOT_SERVED, async_set_issue
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,10 +78,27 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
         self._time_zone: tzinfo = dt_util.get_default_time_zone()
         # Track when each line that is not served should be asked again
         self._not_served: dict[str, float] = {}
+        self._reported_not_served: tuple[str, ...] | None = None
 
     # Resolve the TPER timezone once
     async def _async_setup(self) -> None:
         self._time_zone = await dt_util.async_get_time_zone(TPER_TIME_ZONE) or self._time_zone
+
+    # Raise a repair issue for lines Hello Bus does not serve, only when the set changes
+    def _update_not_served_issue(self, lines_data: dict[str, LineData]) -> None:
+        not_served = tuple(line for line, data in lines_data.items() if data.status == STATUS_NOT_SERVED)
+        if not_served == self._reported_not_served:
+            return
+        self._reported_not_served = not_served
+        async_set_issue(
+            self.hass,
+            self.config_entry,
+            ISSUE_LINES_NOT_SERVED,
+            bool(not_served),
+            # The fix removes those lines, so it is only offered when some lines remain
+            fixable=len(not_served) < len(lines_data),
+            placeholders={"lines": ", ".join(not_served)},
+        )
 
     # Calculate dynamic update interval based on the next bus arrival
     def _calculate_dynamic_update_interval(self, lines_data: dict[str, LineData], now: datetime) -> timedelta:
@@ -151,6 +169,8 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
                 translation_key="cannot_connect",
                 translation_placeholders={"stop_id": stop_id},
             )
+
+        self._update_not_served_issue(lines_data)
 
         # Update coordinator interval based on bus times
         self.update_interval = self._calculate_dynamic_update_interval(

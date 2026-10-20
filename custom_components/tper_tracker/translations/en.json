@@ -102,5 +102,27 @@
     "cannot_connect": {
       "message": "Could not reach TPER Hello Bus for stop {stop_id}."
     }
+  },
+  "issues": {
+    "stop_not_found": {
+      "title": "TPER stop no longer exists",
+      "description": "The stop of **{title}** is no longer in the TPER stop list, so it will not get live data. Open the integration and choose **Reconfigure** to pick another stop."
+    },
+    "lines_not_served": {
+      "title": "Lines not served at {title}",
+      "description": "TPER Hello Bus does not serve line(s) **{lines}** at the stop of **{title}**.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Stop tracking lines not served",
+            "description": "Line(s) **{lines}** are not served at **{title}**. Submit to stop tracking them; their sensors will be removed."
+          }
+        },
+        "abort": {
+          "entry_not_loaded": "The integration is not loaded. Try again once it is running.",
+          "no_lines_left": "No line of this stop is served. Use **Reconfigure** to pick another stop."
+        }
+      }
+    }
   }
 }

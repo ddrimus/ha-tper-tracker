@@ -102,5 +102,27 @@
     "cannot_connect": {
       "message": "Impossibile contattare TPER Hello Bus per la fermata {stop_id}."
     }
+  },
+  "issues": {
+    "stop_not_found": {
+      "title": "La fermata TPER non esiste più",
+      "description": "La fermata di **{title}** non è più presente nell'elenco fermate TPER, quindi non riceverà dati in tempo reale. Apri l'integrazione e scegli **Riconfigura** per selezionare un'altra fermata."
+    },
+    "lines_not_served": {
+      "title": "Linee non servite a {title}",
+      "description": "TPER Hello Bus non serve la/le linea/e **{lines}** alla fermata di **{title}**.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Smetti di seguire le linee non servite",
+            "description": "La/le linea/e **{lines}** non sono servite a **{title}**. Conferma per smettere di seguirle; i loro sensori verranno rimossi."
+          }
+        },
+        "abort": {
+          "entry_not_loaded": "L'integrazione non è caricata. Riprova quando è in funzione.",
+          "no_lines_left": "Nessuna linea di questa fermata è servita. Usa **Riconfigura** per scegliere un'altra fermata."
+        }
+      }
+    }
   }
 }
