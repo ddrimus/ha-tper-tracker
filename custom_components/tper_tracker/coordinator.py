@@ -6,7 +6,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, tzinfo
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -21,6 +23,7 @@ from .api import (
     TperRateLimitedError,
 )
 from .const import (
+    CONF_ACTIVE_ENTITY,
     CONF_LINES,
     CONF_STOP_ID,
     DOMAIN,
@@ -29,7 +32,7 @@ from .const import (
     TPER_TIME_ZONE,
     UPDATE_INTERVAL,
 )
-from .issues import ISSUE_LINES_NOT_SERVED, async_set_issue
+from .issues import ISSUE_ACTIVE_ENTITY_MISSING, ISSUE_LINES_NOT_SERVED, async_set_issue
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +43,7 @@ STATUS_OK = "ok"
 STATUS_NO_BUSES = "no_buses"
 STATUS_NOT_SERVED = "not_served"
 STATUS_ERROR = "error"
+STATUS_INACTIVE = "inactive"
 
 
 # Real-time state of one line at the configured stop
@@ -80,9 +84,44 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
         self._not_served: dict[str, float] = {}
         self._reported_not_served: tuple[str, ...] | None = None
 
-    # Resolve the TPER timezone once
+    # Resolve the TPER timezone once, and follow the optional active entity
     async def _async_setup(self) -> None:
         self._time_zone = await dt_util.async_get_time_zone(TPER_TIME_ZONE) or self._time_zone
+
+        if entity_id := self.config_entry.options.get(CONF_ACTIVE_ENTITY):
+            self.config_entry.async_on_unload(
+                async_track_state_change_event(self.hass, [entity_id], self._async_active_entity_changed)
+            )
+
+    # Refresh right away when the active entity turns on or off
+    @callback
+    def _async_active_entity_changed(self, event: Event[EventStateChangedData]) -> None:
+        old_state, new_state = event.data["old_state"], event.data["new_state"]
+        if (old_state and old_state.state) != (new_state and new_state.state):
+            self.config_entry.async_create_background_task(
+                self.hass, self.async_request_refresh(), f"{DOMAIN} active entity changed"
+            )
+
+    # Check whether polling should run now, never stopping for a missing or unavailable entity
+    def _is_active(self) -> bool:
+        entity_id = self.config_entry.options.get(CONF_ACTIVE_ENTITY)
+        if not entity_id:
+            async_set_issue(self.hass, self.config_entry, ISSUE_ACTIVE_ENTITY_MISSING, False)
+            return True
+
+        state = self.hass.states.get(entity_id)
+        # During startup the entity may simply not be loaded yet
+        if state is not None or self.hass.is_running:
+            async_set_issue(
+                self.hass,
+                self.config_entry,
+                ISSUE_ACTIVE_ENTITY_MISSING,
+                state is None,
+                placeholders={"entity_id": entity_id},
+            )
+        if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            return True
+        return state.state == STATE_ON
 
     # Raise a repair issue for lines Hello Bus does not serve, only when the set changes
     def _update_not_served_issue(self, lines_data: dict[str, LineData]) -> None:
@@ -130,6 +169,11 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
     async def _async_update_data(self) -> dict[str, LineData]:
         stop_id = self.config_entry.data[CONF_STOP_ID]
         lines = self.config_entry.options.get(CONF_LINES, [])
+
+        # Skip requests outside active hours and stop polling until the entity turns on
+        if not self._is_active():
+            self.update_interval = None
+            return {line: LineData(STATUS_INACTIVE) for line in lines}
 
         lines_data: dict[str, LineData] = {}
         for line in lines:

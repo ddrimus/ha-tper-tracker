@@ -36,10 +36,14 @@
   "options": {
     "step": {
       "init": {
-        "title": "Modifica Linee",
-        "description": "Seleziona le linee del bus da monitorare.",
+        "title": "Modifica Opzioni",
+        "description": "Seleziona le linee del bus da monitorare e, facoltativamente, quando seguirle.",
         "data": {
-          "lines": "Linee del bus"
+          "lines": "Linee del bus",
+          "active_entity": "Attivo solo quando questa entità è accesa"
+        },
+        "data_description": {
+          "active_entity": "Facoltativo. I dati in tempo reale vengono scaricati solo quando questa entità è accesa, ad esempio un aiutante Programmazione con gli orari del tuo tragitto. Lascia vuoto per seguire tutto il giorno."
         }
       }
     },
@@ -64,7 +68,8 @@
               "ok": "Bus in arrivo",
               "no_buses": "Nessun altro bus",
               "not_served": "Linea non servita",
-              "error": "Errore di connessione"
+              "error": "Errore di connessione",
+              "inactive": "Fuori dall'orario attivo"
             }
           },
           "next_bus_1_time": {
@@ -123,6 +128,10 @@
           "no_lines_left": "Nessuna linea di questa fermata è servita. Usa **Riconfigura** per scegliere un'altra fermata."
         }
       }
+    },
+    "active_entity_missing": {
+      "title": "Entità dell'orario attivo non trovata",
+      "description": "**{title}** è impostato per seguire i bus solo quando `{entity_id}` è acceso, ma quell'entità non esiste. I dati in tempo reale vengono scaricati tutto il giorno finché non scegli un'altra entità o cancelli l'opzione nelle impostazioni dell'integrazione."
     }
   }
 }

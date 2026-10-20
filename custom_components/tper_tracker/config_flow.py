@@ -7,6 +7,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    EntitySelector,
+    EntitySelectorConfig,
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -15,6 +17,7 @@ from homeassistant.helpers.selector import (
 
 from .api import TperApiError
 from .const import (
+    CONF_ACTIVE_ENTITY,
     CONF_LINES,
     CONF_STOP_ID,
     CONF_STOP_NAME,
@@ -24,6 +27,9 @@ from .const import (
 from .stops import Stop, async_get_stop_directory
 
 _LOGGER = logging.getLogger(__name__)
+
+# Entities that can switch polling on and off (a schedule helper covers time windows)
+ACTIVE_ENTITY_DOMAINS = ["schedule", "input_boolean", "binary_sensor", "switch"]
 
 
 # Validation function for the selected lines (the selector already rejects unknown lines)
@@ -140,7 +146,7 @@ class TperTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 # Options flow handler for modifying existing configuration
 class TperTrackerOptionsFlowHandler(config_entries.OptionsFlow):
-    # Single step for options: modify selected bus lines
+    # Single step for options: modify selected bus lines and active hours
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
         stop_id = self.config_entry.data[CONF_STOP_ID]
@@ -162,10 +168,18 @@ class TperTrackerOptionsFlowHandler(config_entries.OptionsFlow):
             if not _valid_lines(lines):
                 errors[CONF_LINES] = "invalid_line_selection"
             else:
-                return self.async_create_entry(title="", data={CONF_LINES: lines})
+                options: dict[str, Any] = {CONF_LINES: lines}
+                if active_entity := user_input.get(CONF_ACTIVE_ENTITY):
+                    options[CONF_ACTIVE_ENTITY] = active_entity
+                return self.async_create_entry(title="", data=options)
 
+        schema = _lines_schema(available, current).extend({
+            vol.Optional(CONF_ACTIVE_ENTITY): EntitySelector(
+                EntitySelectorConfig(domain=ACTIVE_ENTITY_DOMAINS)
+            )
+        })
         return self.async_show_form(
             step_id="init",
-            data_schema=_lines_schema(available, current),
+            data_schema=self.add_suggested_values_to_schema(schema, self.config_entry.options),
             errors=errors,
         )

@@ -36,10 +36,14 @@
   "options": {
     "step": {
       "init": {
-        "title": "Edit Lines",
-        "description": "Select which bus lines to monitor.",
+        "title": "Edit Options",
+        "description": "Select which bus lines to monitor, and optionally when to track them.",
         "data": {
-          "lines": "Bus lines"
+          "lines": "Bus lines",
+          "active_entity": "Active only while this is on"
+        },
+        "data_description": {
+          "active_entity": "Optional. Live data is fetched only while this entity is on, for example a Schedule helper with your commute times. Leave empty to track all day."
         }
       }
     },
@@ -64,7 +68,8 @@
               "ok": "Buses arriving",
               "no_buses": "No more buses",
               "not_served": "Line not served",
-              "error": "Connection error"
+              "error": "Connection error",
+              "inactive": "Outside active hours"
             }
           },
           "next_bus_1_time": {
@@ -123,6 +128,10 @@
           "no_lines_left": "No line of this stop is served. Use **Reconfigure** to pick another stop."
         }
       }
+    },
+    "active_entity_missing": {
+      "title": "Active hours entity not found",
+      "description": "**{title}** is set to track buses only while `{entity_id}` is on, but that entity does not exist. Live data is fetched all day until you choose another entity or clear the option in the integration settings."
     }
   }
 }

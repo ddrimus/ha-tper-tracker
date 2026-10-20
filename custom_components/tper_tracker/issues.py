@@ -9,7 +9,8 @@ from .const import DOMAIN
 # Repair issues raised by the integration (also their translation keys)
 ISSUE_STOP_NOT_FOUND = "stop_not_found"
 ISSUE_LINES_NOT_SERVED = "lines_not_served"
-ISSUES = (ISSUE_STOP_NOT_FOUND, ISSUE_LINES_NOT_SERVED)
+ISSUE_ACTIVE_ENTITY_MISSING = "active_entity_missing"
+ISSUES = (ISSUE_STOP_NOT_FOUND, ISSUE_LINES_NOT_SERVED, ISSUE_ACTIVE_ENTITY_MISSING)
 
 
 # Issue id of one kind of issue for one config entry

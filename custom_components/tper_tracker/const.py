@@ -18,6 +18,8 @@ TPER_TIME_ZONE = "Europe/Rome"
 CONF_STOP_ID = "stop_id"
 CONF_STOP_NAME = "stop_name"
 CONF_LINES = "lines"
+# Optional on/off entity, such as a schedule helper, that enables polling while on
+CONF_ACTIVE_ENTITY = "active_entity"
 
 # API and update timing configuration (seconds)
 API_TIMEOUT = 10
