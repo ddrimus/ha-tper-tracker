@@ -123,7 +123,6 @@
     },
     "lines_not_served": {
       "title": "Linee non servite a {title}",
-      "description": "TPER Hello Bus non serve la/le linea/e **{lines}** alla fermata di **{title}**.",
       "fix_flow": {
         "step": {
           "confirm": {
@@ -136,6 +135,10 @@
           "no_lines_left": "Nessuna linea di questa fermata è servita. Usa **Riconfigura** per scegliere un'altra fermata."
         }
       }
+    },
+    "no_lines_served": {
+      "title": "Nessuna linea seguita servita a {title}",
+      "description": "TPER Hello Bus non serve nessuna delle linee seguite (**{lines}**) alla fermata di **{title}**. Apri l'integrazione e scegli **Riconfigura** per selezionare un'altra fermata."
     },
     "active_entity_missing": {
       "title": "Entità dell'orario attivo non trovata",

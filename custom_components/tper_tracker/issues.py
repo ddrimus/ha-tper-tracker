@@ -10,6 +10,8 @@ from .const import DOMAIN
 ISSUE_STOP_NOT_FOUND = "stop_not_found"
 ISSUE_LINES_NOT_SERVED = "lines_not_served"
 ISSUE_ACTIVE_ENTITY_MISSING = "active_entity_missing"
+# Text of the lines not served issue when no tracked line is served, which has nothing to fix
+NO_LINES_SERVED = "no_lines_served"
 ISSUES = (ISSUE_STOP_NOT_FOUND, ISSUE_LINES_NOT_SERVED, ISSUE_ACTIVE_ENTITY_MISSING)
 
 
@@ -28,6 +30,7 @@ def async_set_issue(
     *,
     fixable: bool = False,
     placeholders: dict[str, str] | None = None,
+    translation_key: str | None = None,
 ) -> None:
     if not present:
         ir.async_delete_issue(hass, DOMAIN, issue_id(entry, kind))
@@ -39,7 +42,7 @@ def async_set_issue(
         issue_id(entry, kind),
         is_fixable=fixable,
         severity=ir.IssueSeverity.WARNING,
-        translation_key=kind,
+        translation_key=translation_key or kind,
         translation_placeholders={"title": entry.title, **(placeholders or {})},
         data={"entry_id": entry.entry_id},
     )

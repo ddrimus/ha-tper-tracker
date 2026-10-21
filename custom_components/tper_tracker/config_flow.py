@@ -181,13 +181,15 @@ class TperTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if reconfigure:
                     entry = self._get_reconfigure_entry()
                     _async_move_to_stop(self.hass, entry, self.stop.id)
-                    return self.async_update_reload_and_abort(
+                    # The update listener reloads the entry, so it must not be reloaded here too
+                    self.hass.config_entries.async_update_entry(
                         entry,
                         unique_id=self.stop.id,
                         title=title,
                         data=data,
                         options={**entry.options, CONF_LINES: lines},
                     )
+                    return self.async_abort(reason="reconfigure_successful")
 
                 return self.async_create_entry(title=title, data=data, options={CONF_LINES: lines})
 

@@ -32,7 +32,7 @@ from .const import (
     TPER_TIME_ZONE,
     UPDATE_INTERVAL,
 )
-from .issues import ISSUE_ACTIVE_ENTITY_MISSING, ISSUE_LINES_NOT_SERVED, async_set_issue
+from .issues import ISSUE_ACTIVE_ENTITY_MISSING, ISSUE_LINES_NOT_SERVED, NO_LINES_SERVED, async_set_issue
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -129,14 +129,16 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
         if not_served == self._reported_not_served:
             return
         self._reported_not_served = not_served
+        # The fix removes those lines, so it is only offered when some lines remain
+        fixable = len(not_served) < len(lines_data)
         async_set_issue(
             self.hass,
             self.config_entry,
             ISSUE_LINES_NOT_SERVED,
             bool(not_served),
-            # The fix removes those lines, so it is only offered when some lines remain
-            fixable=len(not_served) < len(lines_data),
+            fixable=fixable,
             placeholders={"lines": ", ".join(not_served)},
+            translation_key=None if fixable else NO_LINES_SERVED,
         )
 
     # Calculate dynamic update interval based on the next bus arrival
