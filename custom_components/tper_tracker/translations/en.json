@@ -8,6 +8,13 @@
           "stop_query": "Search stop"
         }
       },
+      "reconfigure": {
+        "title": "Change Stop",
+        "description": "Search for the new bus stop. Lines served at both stops keep their sensors, history and automations.",
+        "data": {
+          "stop_query": "Search stop"
+        }
+      },
       "select_stop": {
         "title": "Select Stop",
         "description": "Choose your bus stop from the results:",
@@ -30,7 +37,8 @@
       "invalid_line_selection": "Invalid line selection. Please select at least one valid line (max 20)."
     },
     "abort": {
-      "already_configured": "This stop is already configured. Use **Configure** to modify lines."
+      "already_configured": "This stop is already configured. Use **Configure** to modify lines.",
+      "reconfigure_successful": "The stop was changed successfully."
     }
   },
   "options": {

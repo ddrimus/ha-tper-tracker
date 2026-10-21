@@ -8,6 +8,13 @@
           "stop_query": "Cerca fermata"
         }
       },
+      "reconfigure": {
+        "title": "Cambia Fermata",
+        "description": "Cerca la nuova fermata. Le linee servite da entrambe le fermate mantengono sensori, cronologia e automazioni.",
+        "data": {
+          "stop_query": "Cerca fermata"
+        }
+      },
       "select_stop": {
         "title": "Seleziona Fermata",
         "description": "Scegli la tua fermata tra i risultati:",
@@ -30,7 +37,8 @@
       "invalid_line_selection": "Selezione linee non valida. Seleziona almeno una linea valida (max 20)."
     },
     "abort": {
-      "already_configured": "Questa fermata è già configurata. Usa **Configura** per modificare le linee."
+      "already_configured": "Questa fermata è già configurata. Usa **Configura** per modificare le linee.",
+      "reconfigure_successful": "La fermata è stata cambiata con successo."
     }
   },
   "options": {

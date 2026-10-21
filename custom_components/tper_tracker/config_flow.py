@@ -5,7 +5,9 @@ from typing import Any
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
@@ -24,6 +26,7 @@ from .const import (
     DOMAIN,
     MAX_LINES,
 )
+from .sensor import sensor_unique_id
 from .stops import Stop, async_get_stop_directory
 
 _LOGGER = logging.getLogger(__name__)
@@ -50,6 +53,28 @@ def _lines_schema(available: list[str], default: list[str]) -> vol.Schema:
     })
 
 
+# Move sensors and the device to a new stop, so entity ids and automations are kept
+@callback
+def _async_move_to_stop(hass: HomeAssistant, entry: config_entries.ConfigEntry, stop_id: str) -> None:
+    old_stop_id = entry.data[CONF_STOP_ID]
+    if old_stop_id == stop_id:
+        return
+
+    entity_registry = er.async_get(hass)
+    prefix = sensor_unique_id(old_stop_id, "")
+    for entity in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
+        if entity.unique_id.startswith(prefix):
+            line = entity.unique_id.removeprefix(prefix)
+            entity_registry.async_update_entity(entity.entity_id, new_unique_id=sensor_unique_id(stop_id, line))
+
+    device_registry = dr.async_get(hass)
+    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        if (DOMAIN, old_stop_id) in device.identifiers:
+            device_registry.async_update_device(
+                device.id, new_identifiers={(DOMAIN, stop_id)}, name=f"TPER Tracker #{stop_id}"
+            )
+
+
 # Main configuration flow class for TPER Tracker setup
 class TperTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 2
@@ -69,6 +94,14 @@ class TperTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     # Initial step: user enters stop search query
     async def async_step_user(self, user_input: dict[str, Any] | None = None):
+        return await self._async_step_search("user", user_input)
+
+    # Reconfigure step: user searches for a different stop, keeping the entry and its entities
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None):
+        return await self._async_step_search("reconfigure", user_input)
+
+    # Shared search step for setup and reconfigure
+    async def _async_step_search(self, step_id: str, user_input: dict[str, Any] | None):
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -90,7 +123,7 @@ class TperTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         return await self.async_step_select_stop()
 
         return self.async_show_form(
-            step_id="user",
+            step_id=step_id,
             data_schema=vol.Schema({
                 vol.Required("stop_query"): str
             }),
@@ -102,8 +135,17 @@ class TperTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # The selector only accepts stops from the search results
             self.stop = next(stop for stop in self.stops if stop.id == user_input[CONF_STOP_ID])
-            await self.async_set_unique_id(self.stop.id)
-            self._abort_if_unique_id_configured()
+            if self.source == config_entries.SOURCE_RECONFIGURE:
+                # Moving to the current stop is fine, moving to another entry's stop is not
+                entry = self._get_reconfigure_entry()
+                if any(
+                    other.unique_id == self.stop.id and other.entry_id != entry.entry_id
+                    for other in self._async_current_entries(include_ignore=False)
+                ):
+                    return self.async_abort(reason="already_configured")
+            else:
+                await self.async_set_unique_id(self.stop.id)
+                self._abort_if_unique_id_configured()
             return await self.async_step_select_lines()
 
         return self.async_show_form(
@@ -126,6 +168,7 @@ class TperTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         assert self.stop is not None
         available = list(self.stop.lines)
+        reconfigure = self.source == config_entries.SOURCE_RECONFIGURE
 
         if user_input is not None:
             lines = user_input[CONF_LINES]
@@ -134,11 +177,29 @@ class TperTrackerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 title = f"{self.stop.name} ({self.stop.id})"
                 data = {CONF_STOP_ID: self.stop.id, CONF_STOP_NAME: self.stop.name}
+
+                if reconfigure:
+                    entry = self._get_reconfigure_entry()
+                    _async_move_to_stop(self.hass, entry, self.stop.id)
+                    return self.async_update_reload_and_abort(
+                        entry,
+                        unique_id=self.stop.id,
+                        title=title,
+                        data=data,
+                        options={**entry.options, CONF_LINES: lines},
+                    )
+
                 return self.async_create_entry(title=title, data=data, options={CONF_LINES: lines})
+
+        # When reconfiguring, preselect the current lines that the new stop also serves
+        default: list[str] = []
+        if reconfigure:
+            current = self._get_reconfigure_entry().options.get(CONF_LINES, [])
+            default = [line for line in current if line in available]
 
         return self.async_show_form(
             step_id="select_lines",
-            data_schema=_lines_schema(available, []),
+            data_schema=_lines_schema(available, default),
             errors=errors,
             description_placeholders={"stop": self.stop.label},
         )
