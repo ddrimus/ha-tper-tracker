@@ -50,7 +50,7 @@ jobs:
       - name: Lint with ruff
         run: |
           set -euo pipefail
-          ruff check custom_components tests
+          ruff check custom_components tests scripts
 
       # Includes the lifecycle test that runs every component together
       - name: Run tests with coverage
