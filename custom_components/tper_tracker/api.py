@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from aiohttp import ClientError, ClientSession, ClientTimeout
 
-from .const import API_TIMEOUT, HELLOBUS_URL, LOCK_BACKOFF, REQUEST_SPACING, USER_AGENT
+from .const import API_TIMEOUT, HELLOBUS_URL, LOCK_BACKOFF, REQUEST_BURST, REQUEST_SPACING, USER_AGENT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -102,7 +102,8 @@ class HelloBusClient:
     def __init__(self, session: ClientSession) -> None:
         self._session = session
         self._lock = asyncio.Lock()
-        self._last_request = 0.0
+        self._tokens = float(REQUEST_BURST)
+        self._refilled = time.monotonic()
         self._paused_until = 0.0
         self.stats = {"requests": 0, "errors": 0, "rate_limited": 0}
 
@@ -117,10 +118,7 @@ class HelloBusClient:
             if time.monotonic() < self._paused_until:
                 raise TperRateLimitedError("Hello Bus paused after a TPER rate limit")
 
-            wait = self._last_request + REQUEST_SPACING - time.monotonic()
-            if wait > 0:
-                await asyncio.sleep(wait)
-            self._last_request = time.monotonic()
+            await self._async_take_token()
 
             self.stats["requests"] += 1
             try:
@@ -138,6 +136,17 @@ class HelloBusClient:
             except TperApiError:
                 self.stats["errors"] += 1
                 raise
+
+    # Wait for a free request slot, allowing short bursts but keeping the long-term rate
+    async def _async_take_token(self) -> None:
+        now = time.monotonic()
+        self._tokens = min(float(REQUEST_BURST), self._tokens + (now - self._refilled) / REQUEST_SPACING)
+        self._refilled = now
+        if self._tokens < 1:
+            await asyncio.sleep((1 - self._tokens) * REQUEST_SPACING)
+            self._tokens = 1.0
+            self._refilled = time.monotonic()
+        self._tokens -= 1
 
     # Internal method to make the HTTP request to Hello Bus
     async def _request(self, stop_id: str, line: str) -> str:

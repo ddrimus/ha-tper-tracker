@@ -1,4 +1,6 @@
+import time
 from datetime import datetime
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -88,6 +90,26 @@ def test_line_matches(reported: str, line: str, expected: bool) -> None:
 )
 def test_resolve_arrival_time(now: datetime, hhmm: str, expected: datetime) -> None:
     assert resolve_arrival_time(hhmm, now) == expected
+
+
+# Test that requests go out in a short burst, then wait for the spacing
+async def test_request_burst_then_spacing(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker) -> None:
+    aioclient_mock.get(HELLOBUS_URL, text=hellobus_xml("TperHellobus: OGGI NESSUNA ALTRA CORSA"))
+    with (
+        patch("custom_components.tper_tracker.api.REQUEST_BURST", 3),
+        patch("custom_components.tper_tracker.api.REQUEST_SPACING", 0.2),
+    ):
+        client = HelloBusClient(async_get_clientsession(hass))
+        started = time.monotonic()
+        for _ in range(3):
+            await client.async_get_arrivals("303", "27")
+        burst = time.monotonic() - started
+        for _ in range(2):
+            await client.async_get_arrivals("303", "27")
+        total = time.monotonic() - started
+
+    assert burst < 0.2
+    assert total >= 0.38
 
 
 # Test that HTTP 429 pauses requests like the Hello Bus lock answer

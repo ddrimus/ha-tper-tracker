@@ -30,8 +30,13 @@ UPDATE_INTERVAL = 60
 IDLE_UPDATE_INTERVAL = 300
 NOT_SERVED_RECHECK = 3600
 
+# A bus whose predicted time just passed is probably still at or near the stop
+LATE_BUS_GRACE = 300
+
 # Rate limit protection, as TPER locks an IP after about 190 requests in a few minutes
+# Up to REQUEST_BURST requests go out at once, then one every REQUEST_SPACING seconds
 REQUEST_SPACING = 2.0
+REQUEST_BURST = 10
 LOCK_BACKOFF = 600
 
 # How long the downloaded stop directory is trusted before checking for a newer version

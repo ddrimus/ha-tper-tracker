@@ -28,6 +28,7 @@ from .const import (
     CONF_STOP_ID,
     DOMAIN,
     IDLE_UPDATE_INTERVAL,
+    LATE_BUS_GRACE,
     NOT_SERVED_RECHECK,
     TPER_TIME_ZONE,
     UPDATE_INTERVAL,
@@ -77,6 +78,8 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
             # Name the stop in log messages, so several entries can be told apart
             name=f"{DOMAIN} {entry.data[CONF_STOP_ID]}",
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
+            # Skip state writes when TPER answers with the same arrivals again
+            always_update=False,
         )
         self.client = client
         self._time_zone: tzinfo = dt_util.get_default_time_zone()
@@ -141,13 +144,13 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
             translation_key=None if fixable else NO_LINES_SERVED,
         )
 
-    # Calculate dynamic update interval based on the next bus arrival
+    # Calculate dynamic update interval based on the next bus arrival, late buses count as imminent
     def _calculate_dynamic_update_interval(self, lines_data: dict[str, LineData], now: datetime) -> timedelta:
         upcoming = [
             when
             for line_data in lines_data.values()
             for when, _ in line_data.arrivals
-            if when > now
+            if when > now - timedelta(seconds=LATE_BUS_GRACE)
         ]
         if not upcoming:
             return timedelta(seconds=IDLE_UPDATE_INTERVAL)

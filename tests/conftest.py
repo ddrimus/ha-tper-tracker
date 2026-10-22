@@ -36,10 +36,10 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     return
 
 
-# Remove the delay between Hello Bus requests so tests run fast
+# Allow unlimited Hello Bus bursts so tests never wait between requests
 @pytest.fixture(autouse=True)
 def no_request_spacing():
-    with patch("custom_components.tper_tracker.api.REQUEST_SPACING", 0):
+    with patch("custom_components.tper_tracker.api.REQUEST_BURST", 10**6):
         yield
 
 

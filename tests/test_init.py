@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -80,6 +82,19 @@ async def test_rate_limit_pauses_requests(hass: HomeAssistant, aioclient_mock: A
     await hass.config_entries.async_reload(entry.entry_id)
     assert entry.state is ConfigEntryState.SETUP_RETRY
     assert aioclient_mock.call_count == calls
+
+
+# Test that a bus whose time just passed keeps the fast polling
+async def test_late_bus_keeps_fast_polling(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, freezer) -> None:
+    mock_portal(aioclient_mock)
+    freezer.move_to("2026-10-22 13:40:00+02:00")
+    mock_line(aioclient_mock, "27", "TperHellobus: 27A DaSatellite 13:38 (Bus5662 CON PEDANA)")
+    entry = make_entry(["27"])
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.runtime_data.update_interval == timedelta(seconds=30)
 
 
 # Test that an unexpected answer for one line does not hide the other lines
