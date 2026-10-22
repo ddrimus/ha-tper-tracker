@@ -17,7 +17,15 @@ from homeassistant.helpers.singleton import singleton
 from homeassistant.helpers.storage import Store
 
 from .api import TperApiError
-from .const import DATASET_TIMEOUT, DOMAIN, OPEN_DATA_URL, STOPS_DATASET, STOPS_MAX_AGE
+from .const import (
+    DATASET_TIMEOUT,
+    DOMAIN,
+    OPEN_DATA_URL,
+    STOPS_DATASET,
+    STOPS_MAX_AGE,
+    STOPS_RETRY_DELAY,
+    USER_AGENT,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -92,7 +100,10 @@ def parse_stops_csv(text: str) -> dict[str, Stop]:
 async def _async_get(session: ClientSession, url: str, params: dict[str, str]) -> bytes:
     try:
         async with session.get(
-            url, params=params, timeout=ClientTimeout(total=DATASET_TIMEOUT)
+            url,
+            params=params,
+            headers={"User-Agent": USER_AGENT},
+            timeout=ClientTimeout(total=DATASET_TIMEOUT),
         ) as response:
             response.raise_for_status()
             return await response.read()
@@ -143,8 +154,10 @@ class StopDirectory:
         self._index: dict[str, str] = {}
         self._version: str | None = None
         self._fetched = 0.0
+        self._retry_after = 0.0
+        self._refresh_task: asyncio.Task[None] | None = None
 
-    # Load the saved copy and download a newer one when it is missing or old
+    # Load the saved copy, downloading it when missing and refreshing an old one in the background
     async def async_ensure_loaded(self) -> None:
         async with self._lock:
             if not self._loaded:
@@ -152,15 +165,26 @@ class StopDirectory:
                 if data := await self._store.async_load():
                     self._restore(data)
 
-            if self._stops and time.time() - self._fetched < STOPS_MAX_AGE:
+            if not self._stops:
+                await self._async_refresh()
                 return
 
-            try:
+        # Use the saved copy right away, so flows never wait for the portal
+        now = time.time()
+        refreshing = self._refresh_task is not None and not self._refresh_task.done()
+        if not refreshing and now - self._fetched >= STOPS_MAX_AGE and now >= self._retry_after:
+            self._refresh_task = self._hass.async_create_background_task(
+                self._async_background_refresh(), f"{DOMAIN} stop list refresh"
+            )
+
+    # Refresh an old saved copy, waiting before the next try when the portal fails
+    async def _async_background_refresh(self) -> None:
+        try:
+            async with self._lock:
                 await self._async_refresh()
-            except TperApiError as err:
-                if not self._stops:
-                    raise
-                _LOGGER.warning("Could not refresh the TPER stop list, using the saved copy: %s", err)
+        except TperApiError as err:
+            self._retry_after = time.time() + STOPS_RETRY_DELAY
+            _LOGGER.warning("Could not refresh the TPER stop list, using the saved copy: %s", err)
 
     # Get a stop by its TPER code
     def get(self, stop_id: str) -> Stop | None:

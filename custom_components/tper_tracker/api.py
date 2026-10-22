@@ -26,6 +26,11 @@ class TperApiError(Exception):
     pass
 
 
+# Exception for when Hello Bus cannot be reached at all
+class TperConnectionError(TperApiError):
+    pass
+
+
 # Exception for when TPER has locked this IP for sending too many requests
 class TperRateLimitedError(TperApiError):
     pass
@@ -163,6 +168,6 @@ class HelloBusClient:
                 response.raise_for_status()
                 return await response.text()
         except TimeoutError as exc:
-            raise TperApiError(f"Request timeout after {API_TIMEOUT} seconds") from exc
+            raise TperConnectionError(f"Request timeout after {API_TIMEOUT} seconds") from exc
         except ClientError as exc:
-            raise TperApiError(f"HTTP error: {exc}") from exc
+            raise TperConnectionError(f"HTTP error: {exc}") from exc

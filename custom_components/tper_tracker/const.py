@@ -42,6 +42,9 @@ LOCK_BACKOFF = 600
 # How long the downloaded stop directory is trusted before checking for a newer version
 STOPS_MAX_AGE = 7 * 24 * 3600
 
+# How long to wait before trying the open-data portal again after a failed refresh
+STOPS_RETRY_DELAY = 3600
+
 # How often each entry checks that its stop is still in the TPER stop list
 STOP_CHECK_INTERVAL = 24 * 3600
 

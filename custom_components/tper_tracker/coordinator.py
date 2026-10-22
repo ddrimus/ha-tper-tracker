@@ -19,6 +19,7 @@ from .api import (
     Arrival,
     HelloBusClient,
     TperApiError,
+    TperConnectionError,
     TperNotServedError,
     TperRateLimitedError,
 )
@@ -126,6 +127,10 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
             return True
         return state.state == STATE_ON
 
+    # Check whether a line was recently found not served, so it is not asked again yet
+    def _known_not_served(self, line: str) -> bool:
+        return time.monotonic() < self._not_served.get(line, 0.0)
+
     # Raise a repair issue for lines Hello Bus does not serve, only when the set changes
     def _update_not_served_issue(self, lines_data: dict[str, LineData]) -> None:
         not_served = tuple(line for line, data in lines_data.items() if data.status == STATUS_NOT_SERVED)
@@ -180,10 +185,13 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
             self.update_interval = None
             return {line: LineData(STATUS_INACTIVE) for line in lines}
 
+        # Retry within a minute if this refresh fails, the bus times below replace it on success
+        self.update_interval = timedelta(seconds=UPDATE_INTERVAL)
+
         lines_data: dict[str, LineData] = {}
-        for line in lines:
+        for index, line in enumerate(lines):
             # Do not spend the shared request budget on lines TPER does not serve here
-            if time.monotonic() < self._not_served.get(line, 0.0):
+            if self._known_not_served(line):
                 lines_data[line] = LineData(STATUS_NOT_SERVED)
                 continue
 
@@ -195,6 +203,13 @@ class TperDataUpdateCoordinator(DataUpdateCoordinator[dict[str, LineData]]):
                     translation_key="rate_limited",
                     translation_placeholders={"minutes": str(round(self.client.paused_for / 60) or 1)},
                 ) from err
+            except TperConnectionError as err:
+                # The other lines would wait for the same timeout, so mark them failed too
+                _LOGGER.debug("Hello Bus unreachable for stop %s: %s", stop_id, err)
+                for remaining in lines[index:]:
+                    status = STATUS_NOT_SERVED if self._known_not_served(remaining) else STATUS_ERROR
+                    lines_data[remaining] = LineData(status)
+                break
             except TperNotServedError as err:
                 _LOGGER.debug("Line %s at stop %s not served: %s", line, stop_id, err)
                 self._not_served[line] = time.monotonic() + NOT_SERVED_RECHECK

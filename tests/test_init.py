@@ -10,6 +10,7 @@ from custom_components.tper_tracker.const import (
     CONF_STOP_ID,
     DOMAIN,
     HELLOBUS_URL,
+    UPDATE_INTERVAL,
 )
 
 from .conftest import hellobus_xml
@@ -95,6 +96,41 @@ async def test_late_bus_keeps_fast_polling(hass: HomeAssistant, aioclient_mock: 
     await hass.async_block_till_done()
 
     assert entry.runtime_data.update_interval == timedelta(seconds=30)
+
+
+# Test that an unreachable Hello Bus is asked once per refresh, not once per line
+async def test_unreachable_hellobus_stops_after_first_line(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    mock_portal(aioclient_mock)
+    aioclient_mock.get(HELLOBUS_URL, exc=TimeoutError())
+    entry = make_entry(["27", "N1", "20"])
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+
+    assert entry.state is ConfigEntryState.SETUP_RETRY
+    assert sum(1 for call in aioclient_mock.mock_calls if str(call[1]).startswith(HELLOBUS_URL)) == 1
+
+
+# Test that a failed refresh is retried within a minute, even when the next bus is hours away
+async def test_failed_refresh_retries_soon(hass: HomeAssistant, aioclient_mock: AiohttpClientMocker, freezer) -> None:
+    mock_portal(aioclient_mock)
+    freezer.move_to("2026-10-22 13:40:00+02:00")
+    mock_line(aioclient_mock, "27", "TperHellobus: 27A DaOrario 17:10")
+    entry = make_entry(["27"])
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = entry.runtime_data
+    assert coordinator.update_interval == timedelta(seconds=900)
+
+    aioclient_mock.clear_requests()
+    mock_portal(aioclient_mock)
+    aioclient_mock.get(HELLOBUS_URL, exc=TimeoutError())
+    await coordinator.async_refresh()
+
+    assert not coordinator.last_update_success
+    assert coordinator.update_interval == timedelta(seconds=UPDATE_INTERVAL)
 
 
 # Test that an unexpected answer for one line does not hide the other lines
